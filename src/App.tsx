@@ -1,6 +1,9 @@
 import Search from "./components/Search.tsx";
 import Spinner from "./components/Spinner.tsx";
+import MovieCard from "./components/MovieCard.tsx";
 import { useEffect, useState } from "react";
+import type { Movies } from "./types/movies.ts";
+
 const API_BASE_URL = "https://api.themoviedb.org/3";
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const API_OPTIONS = {
@@ -10,10 +13,7 @@ const API_OPTIONS = {
         Authorization: `Bearer ${API_KEY}`,
     },
 };
-interface Movies {
-    id: number;
-    title: string;
-}
+
 const App = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [movieList, setMovieList] = useState<Movies[]>([]);
@@ -70,7 +70,7 @@ const App = () => {
                     ) : (
                         <ul className="text-white">
                             {movieList.map((movie) => (
-                                <li key={movie.id}>{movie.title}</li>
+                                <MovieCard movie={movie}></MovieCard>
                             ))}
                         </ul>
                     )}
