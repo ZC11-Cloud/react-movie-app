@@ -19,13 +19,15 @@ const App = () => {
     const [movieList, setMovieList] = useState<Movies[]>([]);
     const [errorMessage, setErrorMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const fetchMovies = async () => {
+    const fetchMovies = async (query = "") => {
         setIsLoading(true);
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/discover/movie?&language=zh-CN&sort_by=popularity.desc`,
-                API_OPTIONS
-            );
+            const endPoint = query
+                ? `${API_BASE_URL}/search/movie?&language=zh-CN&query=${encodeURIComponent(
+                      query
+                  )}`
+                : `${API_BASE_URL}/discover/movie?&language=zh-CN&sort_by=popularity.desc`;
+            const response = await fetch(endPoint, API_OPTIONS);
             if (!response.ok) {
                 throw new Error("Failed to fetch movies");
             }
@@ -44,8 +46,8 @@ const App = () => {
         }
     };
     useEffect(() => {
-        fetchMovies();
-    }, []);
+        fetchMovies(searchTerm);
+    }, [searchTerm]);
     return (
         <main>
             <div className="pattern"></div>
