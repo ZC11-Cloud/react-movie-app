@@ -3,7 +3,7 @@ import Spinner from "./components/Spinner.tsx";
 import MovieCard from "./components/MovieCard.tsx";
 import { useEffect, useState } from "react";
 import { useDebounce } from "react-use";
-import type { Movies } from "./types/movies.ts";
+import type { Movies, MovieApiResponse } from "./types/movies.ts";
 import { getTrendingMovies, updateSearchCount } from "./appwrite.ts";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
@@ -17,11 +17,11 @@ const API_OPTIONS = {
 };
 
 const App = () => {
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-    const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
+    const [searchTerm, setSearchTerm] = useState<string>("");
     const [movieList, setMovieList] = useState<Movies[]>([]);
-    const [errorMessage, setErrorMessage] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string>("");
+    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [trendingMovies, setTrendingMovies] = useState<Movies[]>([]);
     useDebounce(
         () => {
@@ -30,7 +30,7 @@ const App = () => {
         1000,
         [searchTerm]
     );
-    const fetchMovies = async (query = "") => {
+    const fetchMovies = async (query = ""): Promise<void> => {
         setIsLoading(true);
         try {
             const endPoint = query
@@ -42,9 +42,9 @@ const App = () => {
             if (!response.ok) {
                 throw new Error("Failed to fetch movies");
             }
-            const data = await response.json();
-            if (data.Response === "False") {
-                setErrorMessage(data.Error || "Failed to fetch movies");
+            const data: MovieApiResponse = await response.json();
+            if (!data.results || data.results.length === 0) {
+                setErrorMessage("Failed to fetch movies");
                 setMovieList([]);
                 return;
             }
@@ -105,7 +105,7 @@ const App = () => {
                         <h2>Trending Movies</h2>
                         <ul>
                             {trendingMovies.map((movie, index) => (
-                                <li>
+                                <li key={movie.id}>
                                     <p>{index + 1}</p>
                                     <img
                                         src={movie.poster_url}
@@ -126,7 +126,10 @@ const App = () => {
                     ) : (
                         <ul className="text-white">
                             {movieList.map((movie) => (
-                                <MovieCard movie={movie}></MovieCard>
+                                <MovieCard
+                                    key={movie.id}
+                                    movie={movie}
+                                ></MovieCard>
                             ))}
                         </ul>
                     )}
