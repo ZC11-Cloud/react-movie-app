@@ -1,7 +1,8 @@
 import Search from "./components/Search.tsx";
 import Spinner from "./components/Spinner.tsx";
 import MovieCard from "./components/MovieCard.tsx";
-import { useEffect, useState } from "react";
+import Pagination from "./components/Pagination.tsx";
+import { useEffect, useState, useCallback } from "react";
 import { useDebounce } from "react-use";
 import type { Movies, MovieApiResponse } from "./types/movies.ts";
 import { getTrendingMovies, updateSearchCount } from "./appwrite.ts";
@@ -23,6 +24,14 @@ const App = () => {
     const [errorMessage, setErrorMessage] = useState<string>("");
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [trendingMovies, setTrendingMovies] = useState<Movies[]>([]);
+
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [totalPages, setTotalPages] = useState<number>(1);
+
+    const handlePageChange = (page: number) => {
+        if (page < 1 || page > totalPages) return;
+        setCurrentPage(page);
+    };
     useDebounce(
         () => {
             setDebouncedSearchTerm(searchTerm);
@@ -30,36 +39,42 @@ const App = () => {
         1000,
         [searchTerm]
     );
-    const fetchMovies = async (query = ""): Promise<void> => {
-        setIsLoading(true);
-        try {
-            const endPoint = query
-                ? `${API_BASE_URL}/search/movie?&language=zh-CN&query=${encodeURIComponent(
-                      query
-                  )}`
-                : `${API_BASE_URL}/discover/movie?&language=zh-CN&sort_by=popularity.desc`;
-            const response = await fetch(endPoint, API_OPTIONS);
-            if (!response.ok) {
-                throw new Error("Failed to fetch movies");
+    const fetchMovies = useCallback(
+        async (query = ""): Promise<void> => {
+            setIsLoading(true);
+            try {
+                const endPoint = query
+                    ? `${API_BASE_URL}/search/movie?&language=zh-CN&page=${currentPage}&query=${encodeURIComponent(
+                          query
+                      )}`
+                    : `${API_BASE_URL}/discover/movie?&language=zh-CN&page=${currentPage}sort_by=popularity.desc`;
+                const response = await fetch(endPoint, API_OPTIONS);
+                if (!response.ok) {
+                    throw new Error("Failed to fetch movies");
+                }
+                const data: MovieApiResponse = await response.json();
+                if (!data.results || data.results.length === 0) {
+                    setErrorMessage("Failed to fetch movies");
+                    setMovieList([]);
+                    return;
+                }
+                setMovieList(data.results);
+                setCurrentPage(data.page);
+                setTotalPages(data.total_pages);
+                if (query && data.results.length > 0) {
+                    await updateSearchCount(query, data.results[0]);
+                }
+            } catch (error) {
+                console.error("Error fetching movies:", error);
+                setErrorMessage(
+                    "Error fetching movies. Please try again later."
+                );
+            } finally {
+                setIsLoading(false);
             }
-            const data: MovieApiResponse = await response.json();
-            if (!data.results || data.results.length === 0) {
-                setErrorMessage("Failed to fetch movies");
-                setMovieList([]);
-                return;
-            }
-            setMovieList(data.results);
-
-            if (query && data.results.length > 0) {
-                await updateSearchCount(query, data.results[0]);
-            }
-        } catch (error) {
-            console.error("Error fetching movies:", error);
-            setErrorMessage("Error fetching movies. Please try again later.");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        },
+        [currentPage]
+    );
 
     const loadTrendingMovies = async () => {
         try {
@@ -80,11 +95,15 @@ const App = () => {
     };
     useEffect(() => {
         fetchMovies(debouncedSearchTerm);
-    }, [debouncedSearchTerm]);
+    }, [debouncedSearchTerm, fetchMovies]);
 
     useEffect(() => {
         loadTrendingMovies();
     }, []);
+
+    useEffect(() => {
+        fetchMovies(debouncedSearchTerm);
+    }, [currentPage, fetchMovies, debouncedSearchTerm]);
     return (
         <main>
             <div className="pattern"></div>
@@ -133,6 +152,13 @@ const App = () => {
                             ))}
                         </ul>
                     )}
+                </section>
+                <section className="pagination">
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                    />
                 </section>
             </div>
         </main>

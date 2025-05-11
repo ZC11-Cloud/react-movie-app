@@ -10,6 +10,7 @@ export interface Movies {
 
 // 定义 API 响应类型
 export interface MovieApiResponse {
+    page: number;
     results: Movies[];
     total_results: number;
     total_pages: number;
